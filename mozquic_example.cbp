@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="mozquic_example"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/boss/CLionProjects/mozquic_example"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/boss/CLionProjects/mozquic_example"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/boss/CLionProjects/mozquic_example"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="mozquic_example">
+				<Option output="/home/boss/CLionProjects/mozquic_example/mozquic_example" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/boss/CLionProjects/mozquic_example"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/boss/Desktop/mozilla/mozquic"/>
+					<Add directory="/usr/include/nss"/>
+					<Add directory="/home/boss/Desktop/mozilla/mozquic/../nss/lib/ssl"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 mozquic_example"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="mozquic_example/fast">
+				<Option output="/home/boss/CLionProjects/mozquic_example/mozquic_example" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/boss/CLionProjects/mozquic_example"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/boss/Desktop/mozilla/mozquic"/>
+					<Add directory="/usr/include/nss"/>
+					<Add directory="/home/boss/Desktop/mozilla/mozquic/../nss/lib/ssl"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 mozquic_example/fast"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/boss/CLionProjects/mozquic_example/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/Client.cpp">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/Client.h">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/Server.cpp">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/Server.h">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/main.cpp">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/Desktop/mozilla/nss/lib/ssl/ssl.h">
+			<Option target="mozquic_example"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/FindMozquic.cmake">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/boss/CLionProjects/mozquic_example/FindNSS.cmake">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
