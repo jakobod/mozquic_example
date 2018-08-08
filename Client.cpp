@@ -17,26 +17,14 @@ static FILE* fd[256];
 static int _getCount = 0;
 static uint8_t recvFin = 0; // could be a bool variable
 
-int Client::run(std::string& adress, uint16_t port){
+int Client::run(){
   // set up connection to the server
-  connect(adress, port);
-
-  uint32_t i=0;
-  do {
-    usleep (1000); // this is for handleio todo
-    int code = mozquic_IO(connection);
-    if (code != MOZQUIC_OK) {
-      fprintf(stderr,"IO reported failure\n");
-      break;
-    }
-    if (_getCount == -1) {
-      break;
-    }
-  } while (++i < 2000 || _getCount);
+  connect();
+  // should be connected now
 }
 
 
-int Client::connect(std::string& adress, uint16_t port) {
+int Client::connect() {
   char *cdir = getenv ("MOZQUIC_NSS_CONFIG");
   if (mozquic_nss_config(cdir) != MOZQUIC_OK) {
     fprintf(stderr, "MOZQUIC_NSS_CONFIG FAILURE [%s]\n", cdir ? cdir : "");

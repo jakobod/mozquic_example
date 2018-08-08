@@ -9,14 +9,14 @@ class Client {
   mozquic_config_t config;
 
 public:
-  explicit Client(mozquic_config_t config):
+  explicit Client(mozquic_config_t& config):
   connection(nullptr),
   config(config){};
 
   ~Client() = default;
 
-  int run(std::string& adress, uint16_t port);
-  int connect(std::string& adress, uint16_t port);
+  int run();
+  int connect();
   // int disconnect();
 };
 
