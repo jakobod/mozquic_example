@@ -37,6 +37,7 @@ mozquic_config_t* make_config(int argc, char** argv){
   assert(mozquic_unstable_api1(cfg, "tolerateNoTransportParams", 1, nullptr) == MOZQUIC_OK);
   assert(mozquic_unstable_api1(cfg, "maxSizeAllowed", 1452, nullptr) == MOZQUIC_OK);
 
+  return cfg;
 }
 
 int main(int argc, char** argv) {
@@ -53,6 +54,8 @@ int main(int argc, char** argv) {
     }
   }
   else {
-
+    auto config = *make_config(argc, argv);
+    Client client(config);
+    client.run();
   }
 }

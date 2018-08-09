@@ -3,7 +3,7 @@ project(mozquic_example)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(MOZQUIC_SEARCH_DIR /home/jakob/Desktop/mozilla/mozquic)
+set(MOZQUIC_SEARCH_DIR /home/boss/CLionProjects/mozquic)
 
 set(
         MOZQUIC_EXAMPLE_FILES

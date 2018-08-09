@@ -4,6 +4,13 @@
 #include "MozQuic.h"
 #include <string>
 
+
+struct Closure {
+  FILE* fd[256] = {nullptr};
+  int getCount = 0;
+  bool recvFin = false;
+};
+
 class Client {
   mozquic_connection_t* connection;
   mozquic_config_t config;
@@ -15,8 +22,8 @@ public:
 
   ~Client() = default;
 
-  int run();
-  int connect();
+  void run();
+  int connect(Closure& closure);
   // int disconnect();
 };
 

@@ -10,24 +10,24 @@
 #include <cassert>
 #include "MozQuic.h"
 
+const char* NSS_CONFIG =
+                    "/home/boss/CLionProjects/mozquic/sample/nss-config/";
+
 // function prototypes
 static int connEventCB(void *closure, uint32_t event, void *param);
 
-static FILE* fd[256];
-static int _getCount = 0;
-static uint8_t recvFin = 0; // could be a bool variable
-
-int Client::run(){
+void Client::run() {
+  Closure closure;
   // set up connection to the server
-  connect();
+  connect(closure);
   // should be connected now
 }
 
-
-int Client::connect() {
+int Client::connect(Closure& closure) {
   char *cdir = getenv ("MOZQUIC_NSS_CONFIG");
-  if (mozquic_nss_config(cdir) != MOZQUIC_OK) {
-    fprintf(stderr, "MOZQUIC_NSS_CONFIG FAILURE [%s]\n", cdir ? cdir : "");
+  std::string nss_dir("/home/boss/CLionProjects/mozquic/sample/nss-config/");
+  if (mozquic_nss_config(const_cast<char*>(nss_dir.c_str())) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_dir << "]" << std::endl;
     exit(-1);
   }
 
@@ -35,12 +35,14 @@ int Client::connect() {
 
   mozquic_new_connection(&connection, &config);
   mozquic_set_event_callback(connection, connEventCB);
+  mozquic_set_event_callback_closure(connection, &closure);
   mozquic_start_client(connection);
+
+  exit(0);
 }
 
-
-static int connEventCB(void *closure, uint32_t event, void *param)
-{
+static int connEventCB(void* closure, uint32_t event, void* param) {
+  auto clo = static_cast<Closure*>(closure);
   if (event == MOZQUIC_EVENT_CONNECTED) {
     std::cout << "client is connected" << std::endl;
   }
@@ -59,7 +61,7 @@ static int connEventCB(void *closure, uint32_t event, void *param)
 
     char buf[1000] = {0};
     uint32_t amt = 0;
-    int fin = 0;
+    int fin = false;
 
     int code = mozquic_recv(stream, buf, sizeof(buf), &amt, &fin);
     if (code != MOZQUIC_OK) {
@@ -73,7 +75,7 @@ static int connEventCB(void *closure, uint32_t event, void *param)
 
     for (size_t j=0; j < amt; ) {
       // check that file is opened!
-      FILE* file = fd[mozquic_get_streamid(stream)];
+      FILE* file = clo->fd[mozquic_get_streamid(stream)];
       if (file) {
         size_t rv = fwrite(buf + j, 1, amt - j, file);
         assert(rv > 0);
@@ -81,16 +83,16 @@ static int connEventCB(void *closure, uint32_t event, void *param)
       }
     }
     if (fin) {
-      if (fd[mozquic_get_streamid(stream)]) {
+      if (clo->fd[mozquic_get_streamid(stream)]) {
         std::cout << "closing stream now" << std::endl;
-        fclose (fd[mozquic_get_streamid(stream)]);
-        fd[mozquic_get_streamid(stream)] = nullptr;
+        fclose (clo->fd[mozquic_get_streamid(stream)]);
+        clo->fd[mozquic_get_streamid(stream)] = nullptr;
       }
-      recvFin = 1;
+      clo->recvFin = true;
       mozquic_end_stream(stream);
-      if (_getCount) {
-        if (!--_getCount) {
-          _getCount = -1;
+      if (clo->getCount) {
+        if (!--clo->getCount) {
+          clo->getCount = -1;
         }
       }
     }
