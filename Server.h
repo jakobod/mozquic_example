@@ -14,11 +14,17 @@ struct closure_t
 };
 
 class Server {
-
-
+  void setup();
+  mozquic_config_t& config;
+  mozquic_connection_t* connection;
+  mozquic_connection_t* connection_ip6;
 public:
-  Server() = default;
+
+  explicit Server(mozquic_config_t& cfg) :
+  config(cfg) {};
+
   ~Server() = default;
+  void run();
 };
 
 #endif //CLIENT_H

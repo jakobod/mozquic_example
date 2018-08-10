@@ -42,10 +42,23 @@ mozquic_config_t* make_config(int argc, char** argv){
 
 int main(int argc, char** argv) {
   if (argc >= 2) {
-    char *argVal;
     std::string arg(argv[1]);
     if (arg == "-server" || arg == "-s") {
-      // start server
+      auto config = *make_config(argc, argv);
+      fprintf(stderr,"server using certificate for %s on port %d\n", config.originName, config.originPort);
+
+      assert(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "sabotageVN", 0, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "forceAddressValidation", 0, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "streamWindow", 4906, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "connWindow", 8192, nullptr) == MOZQUIC_OK);
+      assert(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr) == MOZQUIC_OK);
+
+      // assert(mozquic_unstable_api1(&config, "dropRate", 5, 0) == MOZQUIC_OK);
+
+      Server server(config);
+      server.run();
     }
     else if (arg == "-client" || arg == "-c"){
       auto config = *make_config(argc, argv);

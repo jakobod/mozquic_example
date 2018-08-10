@@ -10,7 +10,7 @@
 #include <cassert>
 #include "MozQuic.h"
 
-const char* NSS_CONFIG =
+static const char* NSS_CONFIG =
                     "/home/boss/CLionProjects/mozquic/sample/nss-config/";
 
 // function prototypes
@@ -21,11 +21,12 @@ void Client::run() {
   // set up connection to the server
   connect(closure);
   // should be connected now
+
 }
 
 int Client::connect(Closure& closure) {
-  char *cdir = getenv ("MOZQUIC_NSS_CONFIG");
-  std::string nss_dir("/home/boss/CLionProjects/mozquic/sample/nss-config/");
+  std::string nss_dir(NSS_CONFIG);
+  // need to cast away const for c-interface..
   if (mozquic_nss_config(const_cast<char*>(nss_dir.c_str())) != MOZQUIC_OK) {
     std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_dir << "]" << std::endl;
     exit(-1);
