@@ -13,6 +13,7 @@ set(
         Client.h
         Server.cpp
         Server.h
+        mozquic_helper.h
 )
 
 #### FIND ####

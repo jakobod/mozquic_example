@@ -2,36 +2,81 @@
 #include <iostream>
 #include <cstring>
 #include <cassert>
-#import "Server.h"
+#include <unistd.h>
+#include "Server.h"
+#include "mozquic_helper.h"
 
-static const char* NSS_CONFIG =
-        "/home/boss/CLionProjects/mozquic/sample/nss-config/";
-static const uint16_t SERVER_PORT = 4242;
+using namespace std;
+
+static const int SEND_CLOSE_TIMEOUT_MS = 1500;
+static const int TIMEOUT_CLIENT_MS = 30000;
+static const uint16_t SERVER_PORT = 44444;
+static const char* SERVER_NAME = "localhost";
 
 static int connEventCB(void *closure, uint32_t event, void *param);
+static int accept_new_connection(mozquic_connection_t *new_connection);
+int close_connection(mozquic_connection_t *c);
+
+static int connected = 0;
+static bool send_close = false;
 
 void Server::run() {
   setup();
+  std::string dummy;
+
+  uint32_t delay = 1000;
+  uint32_t i = 0;
+  do {
+    usleep (delay); // this is for handleio todo
+    if (!(i++ & 0xf)) {
+      assert(connected >= 0);
+      if (!connected) {
+        delay = 5000;
+      } else {
+        delay = 1000;
+      }
+    }
+    mozquic_IO(connection);
+    mozquic_IO(connection_ip6);
+    mozquic_IO(hrr);
+    mozquic_IO(hrr6);
+  } while (true);
 }
 
 void Server::setup() {
+  memset(&config, 0, sizeof(mozquic_config_t));
+  config.originName = SERVER_NAME;
+  config.originPort = SERVER_PORT;
+  cout << "server using certificate for " << config.originName << ":" << config.originPort << endl;
+
+  config.handleIO = 0; // todo mvp
+  config.appHandlesLogging = 0;
+
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr), "setup-bad_ALPN");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr), "setup-noTransport");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "sabotageVN", 0, nullptr), "setup-sabotage");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 0, nullptr), "setup-addrValidation->0");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "streamWindow", 4906, nullptr), "setup-streamWindow");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "connWindow", 8192, nullptr), "setup-connWindow");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "setup-0rtt");
+
   config.ipv6 = 0;
-  mozquic_new_connection(&connection, &config);
-  mozquic_set_event_callback(connection, connEventCB);
-  mozquic_start_server(connection);
+  CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "setup-new_conn1");
+  CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB), "setup-event_cb1");
+  CHECK_MOZQUIC_ERR(mozquic_start_server(connection), "setup-start_server1");
 
   config.ipv6 = 1;
-  mozquic_new_connection(&connection_ip6, &config);
-  mozquic_set_event_callback(connection_ip6, connEventCB);
-  mozquic_start_server(connection_ip6);
+  CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection_ip6, &config), "setup-new_conn2");
+  CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection_ip6, connEventCB), "setup-event_cb2");
+  CHECK_MOZQUIC_ERR(mozquic_start_server(connection_ip6), "setup-start_server2");
 
   config.originPort = SERVER_PORT + 1;
   config.ipv6 = 0;
-  assert(mozquic_unstable_api1(&config, "forceAddressValidation", 1, nullptr) == MOZQUIC_OK);
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 1, nullptr), "setup-fore_addValidation->1");
   mozquic_new_connection(&hrr, &config);
   mozquic_set_event_callback(hrr, connEventCB);
   mozquic_start_server(hrr);
-  fprintf(stderr,"server using certificate (HRR) for %s on port %d\n", config.originName, config.originPort);
+  cout << "server using certificate (HRR) for " << config.originName << ":" << config.originPort << endl;
 
   config.ipv6 = 1;
   mozquic_new_connection(&hrr6, &config);
@@ -41,8 +86,7 @@ void Server::setup() {
 
 static int connEventCB(void *closure, uint32_t event, void *param) {
   switch (event) {
-    case MOZQUIC_EVENT_NEW_STREAM_DATA:
-    {
+    case MOZQUIC_EVENT_NEW_STREAM_DATA: {
       mozquic_stream_t *stream = param;
 
       char buf;
@@ -50,8 +94,7 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
       uint32_t amt = 0;
       int fin = 0;
       int line = 0;
-      struct closure_t *data = (struct closure_t *)closure;
-      assert(closure);
+      auto data = (struct closure_t *)closure;
       if (!closure) {
         return MOZQUIC_ERR_GENERAL;
       }
@@ -60,7 +103,7 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
         return MOZQUIC_ERR_GENERAL;
       }
       do {
-        uint32_t code = mozquic_recv(stream, &buf, 1, &amt, &fin);
+        int code = mozquic_recv(stream, &buf, 1, &amt, &fin);
         if (code != MOZQUIC_OK) {
           fprintf(stderr,"Read stream error %d\n", code);
           return MOZQUIC_OK;
@@ -92,8 +135,8 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
             case 6:
               data->state[id] = (buf == ' ') ? 7 : 0;
               break;
-            case 7:
-              do09(data, id, stream, &buf, amt);
+            default:
+              data->state[id] = 0;
               break;
           }
           fprintf(stderr,"state %d [%c] fin=%d\n", data->state[id], buf, fin);
@@ -127,7 +170,7 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
         return MOZQUIC_OK;
       }
       {
-        struct closure_t *data = (struct closure_t *)closure;
+        auto data = static_cast<closure_t*>(closure);
         // mozquic_connection_t *conn = param;
         data->i += 1;
         if (send_close && (data->i == SEND_CLOSE_TIMEOUT_MS)) {
@@ -152,3 +195,18 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
   return MOZQUIC_OK;
 }
 
+static int accept_new_connection(mozquic_connection_t *new_connection) {
+  auto closure = new closure_t;
+  memset(closure, 0, sizeof (*closure));
+  CHECK_MOZQUIC_ERR(mozquic_set_event_callback(new_connection, connEventCB), "accept_new_connection-set_callback");
+  CHECK_MOZQUIC_ERR(mozquic_set_event_callback_closure(new_connection, closure), "accept_new_connection-set_closure");
+  connected++;
+  std::cout << "new connection accepted." << std::endl;
+  return MOZQUIC_OK;
+}
+
+int close_connection(mozquic_connection_t *c) {
+  connected--;
+  assert(connected >= 0);
+  return mozquic_destroy_connection(c);
+}

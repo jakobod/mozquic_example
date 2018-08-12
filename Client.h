@@ -13,18 +13,19 @@ struct Closure {
 
 class Client {
   mozquic_connection_t* connection;
+  mozquic_stream_t* stream;
   mozquic_config_t config;
 
-public:
-  explicit Client(mozquic_config_t& config):
-  connection(nullptr),
-  config(config){};
-
-  ~Client() = default;
-
-  void run();
+  int streamtest1(Closure& closure);
   int connect(Closure& closure);
-  // int disconnect();
+
+public:
+  explicit Client():
+                  connection(nullptr),
+                  stream(nullptr),
+                  config() {};
+  ~Client() = default;
+  void run();
 };
 
 #endif //CLIENT_H
