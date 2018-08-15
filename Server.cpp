@@ -8,8 +8,6 @@
 
 using namespace std;
 
-static const int SEND_CLOSE_TIMEOUT_MS = 1500;
-static const int TIMEOUT_CLIENT_MS = 30000;
 static const uint16_t SERVER_PORT = 44444;
 static const char* SERVER_NAME = "localhost";
 
