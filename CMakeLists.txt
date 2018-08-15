@@ -2,19 +2,20 @@ cmake_minimum_required(VERSION 3.5)
 project(mozquic_example)
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "-pthread")
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(MOZQUIC_SEARCH_DIR /home/boss/CLionProjects/mozquic)
+set(MOZQUIC_SEARCH_DIR /home/jakob/CLionProjects/mozquic)
 
 set(
-        MOZQUIC_EXAMPLE_FILES
+    MOZQUIC_EXAMPLE_FILES
 
-        main.cpp
-        Client.cpp
-        Client.h
-        Server.cpp
-        Server.h
-        mozquic_helper.h
-)
+    main.cpp
+    Client.cpp
+    Client.h
+    Server.cpp
+    Server.h
+    mozquic_helper.h
+        Trigger.cpp Trigger.h)
 
 #### FIND ####
 #### MOZQUIC ####
@@ -48,9 +49,9 @@ add_executable(mozquic_example
         ${MOZQUIC_EXAMPLE_FILES}
 )
 target_link_libraries(
-        mozquic_example
-        ${MOZQUIC_LIBRARY}
-        ${NSS_LIBRARIES}
+    mozquic_example
+    ${MOZQUIC_LIBRARY}
+    ${NSS_LIBRARIES}
 	${NSPR_LIBRARIES}
 )
 

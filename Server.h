@@ -3,7 +3,7 @@
 
 #include "MozQuic.h"
 
-// closure is per connection, state is per stream
+// closure is per connections, state is per stream
 struct closure_t
 {
   int i;

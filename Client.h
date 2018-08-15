@@ -2,13 +2,17 @@
 #define EXAMPLE_CLIENT_H
 
 #include "MozQuic.h"
+#include "Trigger.h"
 #include <string>
+#include <thread>
+#include <vector>
 
 
 struct Closure {
   FILE* fd[256] = {nullptr};
   int getCount = 0;
   bool recvFin = false;
+  bool connected = false;
 };
 
 class Client {
@@ -16,7 +20,6 @@ class Client {
   mozquic_stream_t* stream;
   mozquic_config_t config;
 
-  int streamtest1(Closure& closure);
   int connect(Closure& closure);
 
 public:

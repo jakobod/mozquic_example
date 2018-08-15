@@ -116,7 +116,6 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
           switch (data->state[id]) {
             case 0:
               data->state[id] = (buf == 'F') ? 1 : 0;
-              data->state[id] = (buf == 'G') ? 4 : 0;
               break;
             case 1:
               data->state[id] = (buf == 'I') ? 2 : 0;
@@ -125,15 +124,6 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
               data->state[id] = (buf == 'N') ? 3 : 0;
               streamtest1 = 1;
               data->shouldClose = 1;
-              break;
-            case 4:
-              data->state[id] = (buf == 'E') ? 5 : 0;
-              break;
-            case 5:
-              data->state[id] = (buf == 'T') ? 6 : 0;
-              break;
-            case 6:
-              data->state[id] = (buf == ' ') ? 7 : 0;
               break;
             default:
               data->state[id] = 0;
@@ -149,48 +139,18 @@ static int connEventCB(void *closure, uint32_t event, void *param) {
     }
       break;
 
-    case MOZQUIC_EVENT_RESET_STREAM:
-    {
-      // todo not implemented yet.
-      // mozquic_stream_t *stream = param;
-      fprintf(stderr,"Stream was reset\n");
-      return MOZQUIC_OK;
-    }
-
     case MOZQUIC_EVENT_ACCEPT_NEW_CONNECTION:
       return accept_new_connection(param);
 
     case MOZQUIC_EVENT_CLOSE_CONNECTION:
     case MOZQUIC_EVENT_ERROR:
+      if (event == MOZQUIC_EVENT_ERROR) cout << "MOZQUIC_EVENT_ERROR" << endl;
+      else cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
       // todo this leaks the 64bit int allocation
       return close_connection(param);
 
-    case MOZQUIC_EVENT_IO:
-      if (!closure) {
-        return MOZQUIC_OK;
-      }
-      {
-        auto data = static_cast<closure_t*>(closure);
-        // mozquic_connection_t *conn = param;
-        data->i += 1;
-        if (send_close && (data->i == SEND_CLOSE_TIMEOUT_MS)) {
-          fprintf(stderr,"server terminating connection\n");
-          close_connection(param);
-          free(data);
-          exit(0);
-        } else if (data->shouldClose == 3) {
-          fprintf(stderr,"server closing based on fin\n");
-          close_connection(param);
-          free(data);
-        } else if (!(data->i % TIMEOUT_CLIENT_MS)) {
-          fprintf(stderr,"server testing conn\n");
-          mozquic_check_peer(param, 2000);
-        }
-        return MOZQUIC_OK;
-      }
-
-//  default:
-//    fprintf(stderr,"unhandled event %X\n", event);
+      default:
+        break;
   }
   return MOZQUIC_OK;
 }
@@ -201,12 +161,13 @@ static int accept_new_connection(mozquic_connection_t *new_connection) {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(new_connection, connEventCB), "accept_new_connection-set_callback");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback_closure(new_connection, closure), "accept_new_connection-set_closure");
   connected++;
-  std::cout << "new connection accepted." << std::endl;
+  std::cout << "new connections accepted. connected: " << connected << std::endl;
   return MOZQUIC_OK;
 }
 
 int close_connection(mozquic_connection_t *c) {
   connected--;
   assert(connected >= 0);
+  cout << "server closed connection. connected: " << connected << endl;
   return mozquic_destroy_connection(c);
 }

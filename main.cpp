@@ -9,7 +9,7 @@
 #include "MozQuic.h"
 
 static const char* NSS_CONFIG =
-        "/home/boss/CLionProjects/mozquic/sample/nss-config/";
+        "/home/jakob/CLionProjects/mozquic_example/nss-config/";
 
 void run_client() {
   Client client;
@@ -39,6 +39,6 @@ int main(int argc, char** argv) {
     }
   }
   else {
-    run_client();
+    run_server();
   }
 }
