@@ -21,12 +21,12 @@ class Client {
   mozquic_config_t config;
 
   int connect(Closure& closure);
-
+  void streamtest(Closure& closure);
 public:
   explicit Client():
-                  connection(nullptr),
-                  stream(nullptr),
-                  config() {};
+    connection(nullptr),
+    stream(nullptr),
+    config() {};
   ~Client() = default;
   void run();
 };

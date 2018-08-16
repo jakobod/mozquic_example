@@ -3,35 +3,34 @@
 
 #include "MozQuic.h"
 
+static const uint8_t MAX_STREAM = 8;
+static const uint16_t BUF_SIZE = 1024;
+
 // closure is per connections, state is per stream
-struct closure_t
-{
+struct closure_t {
   int i;
-  int state[128];
-  char buf[128][1024];
-  int accum[128];
+  int state[MAX_STREAM];
+  char buf[MAX_STREAM][BUF_SIZE];
+  int accum[MAX_STREAM];
   int shouldClose;
 };
 
 class Server {
-  void setup();
-  mozquic_config_t config;
   mozquic_connection_t* connection;
   mozquic_connection_t* connection_ip6;
   mozquic_connection_t* hrr;
   mozquic_connection_t* hrr6;
 
+  void setup();
+
 public:
-
   Server() :
-  config(),
-  connection(nullptr),
-  connection_ip6(nullptr),
-  hrr(nullptr),
-  hrr6(nullptr) {};
-
-
+    connection(nullptr),
+    connection_ip6(nullptr),
+    hrr(nullptr),
+    hrr6(nullptr) {};
   ~Server() = default;
+
   void run();
 };
 
