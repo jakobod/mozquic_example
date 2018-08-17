@@ -6,11 +6,14 @@
 #include "Trigger.h"
 
 void Trigger::operator()() {
-  bool running = true;
   while (running){
     for(auto c : connections) {
       mozquic_IO(c);
     }
-    usleep(1000);
+    usleep(5000);
   }
+}
+
+void Trigger::stop() {
+  running = false;
 }

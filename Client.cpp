@@ -28,6 +28,7 @@ void Client::run() {
   // should be connected now
 
   streamtest(closure);
+
 }
 
 
@@ -38,7 +39,7 @@ void Client::streamtest(Closure& closure) {
   char msg[8000];
   memset(msg, 'f', 7999);
   msg[7999] = 0;
-  mozquic_stream_t* stream = nullptr;
+
   CHECK_MOZQUIC_ERR(
           mozquic_start_new_stream(&stream, connection, 0, 0, pre, (uint32_t)strlen(pre), 0),
           "streamtest-start_new_stream");
@@ -48,7 +49,7 @@ void Client::streamtest(Closure& closure) {
     usleep (1000); // this is for handleio todo
     int code = mozquic_IO(connection);
     if (code != MOZQUIC_OK) {
-      fprintf(stderr,"IO reported failure\n");
+      cerr << "IO reported failure" << endl;
       break;
     }
   } while (!closure.recvFin);
@@ -75,11 +76,11 @@ int Client::connect(Closure& closure) {
   config.handleIO = 0; // todo mvp
 
   // set things for the protocol
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "greaseVersionNegotiation", 0, nullptr), "connect-versionNegotiation");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr), "connect-tolerateALPN");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr), "connect-noTransportParams");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452, nullptr), "connect-maxSize");
-  // CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "connect-0rtt");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "greaseVersionNegotiation", 0, 0), "connect-versionNegotiation");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, 0), "connect-tolerateALPN");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, 0), "connect-noTransportParams");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452, 0), "connect-maxSize");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, 0), "connect-0rtt");
 
   // open new connections
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "connect-new_conn");
@@ -98,7 +99,7 @@ int Client::connect(Closure& closure) {
     if (closure.getCount == -1) {
       break;
     }
-  } while (++i < 20 || closure.getCount);
+  } while (++i < 2000 || closure.getCount);
 
   return 0;
 }
@@ -150,7 +151,6 @@ int connEventCB(void *closure, uint32_t event, void *param) {
     }
     return MOZQUIC_OK;
   } else if (event == MOZQUIC_EVENT_IO) {
-    cout << "MOZQUIC_EVENT_IO" << endl;
   } else if (event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
              event == MOZQUIC_EVENT_ERROR) {
     if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)

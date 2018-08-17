@@ -9,7 +9,7 @@
 using namespace std;
 
 static const uint16_t SERVER_PORT = 4434;
-static const char* SERVER_NAME = "localhost";
+static const char* SERVER_NAME = "foo.example.com";
 static const int SEND_CLOSE_TIMEOUT_MS = 1500;
 static const int TIMEOUT_CLIENT_MS = 30000;
 
@@ -165,6 +165,11 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 
     case MOZQUIC_EVENT_CLOSE_CONNECTION:
     case MOZQUIC_EVENT_ERROR:
+      if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)
+        cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
+      else
+        cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
+
       // todo this leaks the 64bit int allocation
       return close_connection(param, static_cast<closure_t*>(closure));
 
@@ -176,11 +181,11 @@ int connEventCB(void *closure, uint32_t event, void *param) {
         auto data = static_cast<closure_t*>(closure);
         // mozquic_connection_t *conn = param;
         data->i += 1;
-        if (data->i == SEND_CLOSE_TIMEOUT_MS) {
+        /*if (data->i == SEND_CLOSE_TIMEOUT_MS) {
           cerr << "TIMEOUT! server terminating connection" << endl;
           close_connection(param, data);
-          exit(0);
-        } else if (data->shouldClose == 3) {
+          //exit(0);
+        } else */if (data->shouldClose == 3) {
           cout << "server closing based on fin" << endl;
           close_connection(param, data);
         } else if (!(data->i % TIMEOUT_CLIENT_MS)) {

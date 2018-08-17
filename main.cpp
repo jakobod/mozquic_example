@@ -9,7 +9,7 @@
 #include "MozQuic.h"
 
 static const char* NSS_CONFIG =
-        "/home/boss/CLionProjects/mozquic_example/nss-config/";
+        "/home/jakob/CLionProjects/mozquic_example/nss-config/";
 
 void run_client() {
   Client client;
@@ -22,6 +22,9 @@ void run_server() {
 }
 
 int main(int argc, char** argv) {
+  // log everything
+  setenv("MOZQUIC_LOG", "all:9", 0);
+
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
     std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]" << std::endl;
