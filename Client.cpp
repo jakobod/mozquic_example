@@ -27,8 +27,9 @@ void Client::run() {
   connect(closure);
   // should be connected now
 
-  streamtest(closure);
+  //  streamtest(closure);
 
+  mozquic_destroy_connection(connection);
 }
 
 

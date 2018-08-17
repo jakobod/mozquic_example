@@ -51,6 +51,8 @@ void Server::setup() {
   config.originName = SERVER_NAME;
   config.originPort = SERVER_PORT;
 
+  cout << "server using certificate for " << config.originName << ":" << config.originPort << endl;
+
   config.handleIO = 0; // todo mvp
   config.appHandlesLogging = 0;
 
@@ -62,6 +64,7 @@ void Server::setup() {
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "connWindow", 8192, 0), "setup-connWindow");
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, 0), "setup-0rtt");
 
+  // set up connections
   config.ipv6 = 0;
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "setup-new_conn_ip4");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB), "setup-event_cb_ip4");
@@ -74,10 +77,12 @@ void Server::setup() {
 
   config.originPort = SERVER_PORT + 1;
   config.ipv6 = 0;
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 1, nullptr), "setup-addr_Val_hrr");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 1, 0), "setup-addr_Val_hrr");
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&hrr, &config), "setup-new_conn_hrr");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(hrr, connEventCB), "setup-event_cb_hrr");
   CHECK_MOZQUIC_ERR(mozquic_start_server(hrr), "setup-start_server_hrr");
+
+  cout << "server using certificate (HRR) for " << config.originName << ":" << config.originPort << endl;
 
   config.ipv6 = 1;
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&hrr6, &config), "setup-new_conn_hrr6");
@@ -118,9 +123,9 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 
           switch (data->state[id]) {
             case 0:
-              if(buf == 'F')
+              if (buf == 'F')
                 data->state[id] = 1;
-              else if(buf == 'G')
+              else if (buf == 'G')
                 data->state[id] = 4;
               break;
             case 1:
@@ -168,7 +173,7 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)
         cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
       else
-        cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
+        cout << "MOZQUIC_EVENT_ERROR" << endl;
 
       // todo this leaks the 64bit int allocation
       return close_connection(param, static_cast<closure_t*>(closure));
@@ -181,11 +186,11 @@ int connEventCB(void *closure, uint32_t event, void *param) {
         auto data = static_cast<closure_t*>(closure);
         // mozquic_connection_t *conn = param;
         data->i += 1;
-        /*if (data->i == SEND_CLOSE_TIMEOUT_MS) {
+        if (data->i == SEND_CLOSE_TIMEOUT_MS) {
           cerr << "TIMEOUT! server terminating connection" << endl;
           close_connection(param, data);
           //exit(0);
-        } else */if (data->shouldClose == 3) {
+        } else if (data->shouldClose == 3) {
           cout << "server closing based on fin" << endl;
           close_connection(param, data);
         } else if (!(data->i % TIMEOUT_CLIENT_MS)) {
@@ -203,7 +208,7 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 
 
 int accept_new_connection(mozquic_connection_t* new_connection) {
-  auto closure = static_cast<closure_t*>(malloc(sizeof(closure_t)));
+  auto closure = new closure_t;
   memset(closure, 0, sizeof(closure_t));
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(new_connection, connEventCB), "accept_new_connection-set_callback");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback_closure(new_connection, closure), "accept_new_connection-set_closure");
@@ -217,6 +222,6 @@ int close_connection(mozquic_connection_t *c, closure_t* closure) {
   connected--;
   assert(connected >= 0);
   cout << "server closed connection. connected: " << connected << endl;
-  free(closure);
+  delete closure;
   return mozquic_destroy_connection(c);
 }
