@@ -7,9 +7,7 @@
 
 void Trigger::operator()() {
   while (running){
-    for(auto c : connections) {
-      mozquic_IO(c);
-    }
+    mozquic_IO(connection);
     usleep(5000);
   }
 }

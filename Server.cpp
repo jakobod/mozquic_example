@@ -1,4 +1,5 @@
 #include <string>
+#include <set>
 #include <iostream>
 #include <cstring>
 #include <cassert>
@@ -18,7 +19,9 @@ static const int TIMEOUT_CLIENT_MS = 30000;
 int connEventCB(void *closure, uint32_t event, void *param);
 int accept_new_connection(mozquic_connection_t *new_connection);
 int close_connection(mozquic_connection_t *c, closure_t* closure);
+void pass_to_clients(char* msg, mozquic_stream_t* stream);
 
+set<mozquic_stream_t*> streams;
 int connected = 0;
 
 void Server::run() {
@@ -58,13 +61,13 @@ void Server::setup() {
   config.handleIO = 0; // todo mvp
   config.appHandlesLogging = 0;
 
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, 0), "setup-bad_ALPN");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, 0), "setup-noTransport");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "sabotageVN", 0, 0), "setup-sabotage");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 0, 0), "setup-addrValidation->0");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "streamWindow", 4906, 0), "setup-streamWindow");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "connWindow", 8192, 0), "setup-connWindow");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, 0), "setup-0rtt");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr), "setup-bad_ALPN");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr), "setup-noTransport");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "sabotageVN", 0, nullptr), "setup-sabotage");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 0, nullptr), "setup-addrValidation->0");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "streamWindow", 4906, nullptr), "setup-streamWindow");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "connWindow", 8192, nullptr), "setup-connWindow");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "setup-0rtt");
 
   // set up connections
   config.ipv6 = 0;
@@ -101,65 +104,27 @@ int connEventCB(void *closure, uint32_t event, void *param) {
         return MOZQUIC_ERR_GENERAL;
       }
 
-      char buf;
-      bool streamtest = false;
+      char buf[1024];
+      memset(buf, 0, 1024);
       uint32_t amt = 0;
       int fin = 0;
-      int line = 0;
       mozquic_stream_t *stream = param;
-      auto data = static_cast<closure_t*>(closure);
+      streams.emplace(stream);
       int id = mozquic_get_streamid(stream);
       if (id >= 128) {
         return MOZQUIC_ERR_GENERAL;
       }
       do {
-        int code = mozquic_recv(stream, &buf, 1, &amt, &fin);
+        int code = mozquic_recv(stream, &buf, 1024, &amt, &fin);
         if (code != MOZQUIC_OK) {
           cerr << "Read stream error " << code << endl;
           return MOZQUIC_OK;
         } else if (amt > 0) {
-          assert(amt == 1);
-          if (!line)
-            cout << "Data:" << endl;
-          line++;
-
-          switch (data->state[id]) {
-            case 0:
-              if (buf == 'F')
-                data->state[id] = 1;
-              else if (buf == 'G')
-                data->state[id] = 4;
-              break;
-            case 1:
-              data->state[id] = (buf == 'I') ? 2 : 0;
-              break;
-            case 2:
-              data->state[id] = (buf == 'N') ? 3 : 0;
-              streamtest = true;
-              data->shouldClose = 1;
-              break;
-            case 4:
-              data->state[id] = (buf == 'E') ? 5 : 0;
-              break;
-            case 5:
-              data->state[id] = (buf == 'T') ? 6 : 0;
-              break;
-            case 6:
-              data->state[id] = (buf == ' ') ? 7 : 0;
-              break;
-            case 7:
-            default:
-              // do09(data, id, stream, &buf, amt)
-              data->state[id] = 0;
-              break;
-          }
-          cout << "state " << data->state[id] << " [" << buf << "] fin=" << fin << endl;
+          //assert(amt == 1);
+          cout << buf << endl;
+          pass_to_clients(buf, stream);
         }
-      } while (amt > 0 && !fin && !streamtest);
-      if (streamtest) {
-        char msg[] = "Server sending data.";
-        mozquic_send(stream, msg, strlen(msg), 1);
-      }
+      } while (amt > 0 && !fin);
     }
       break;
 
@@ -180,6 +145,9 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       // todo this leaks the 64bit int allocation
       return close_connection(param, static_cast<closure_t*>(closure));
 
+    case MOZQUIC_EVENT_PING_OK:
+      break;
+
     case MOZQUIC_EVENT_IO:
       if (!closure) {
         return MOZQUIC_OK;
@@ -188,11 +156,7 @@ int connEventCB(void *closure, uint32_t event, void *param) {
         auto data = static_cast<closure_t*>(closure);
         // mozquic_connection_t *conn = param;
         data->i += 1;
-        if (data->i == SEND_CLOSE_TIMEOUT_MS) {
-          cerr << "TIMEOUT! server terminating connection" << endl;
-          close_connection(param, data);
-          //exit(0);
-        } else if (data->shouldClose == 3) {
+        if (data->shouldClose == 3) {
           cout << "server closing based on fin" << endl;
           close_connection(param, data);
         } else if (!(data->i % TIMEOUT_CLIENT_MS)) {
@@ -203,11 +167,11 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       }
 
       default:
-        cerr << "unhandled event " << event << endl;
+        cerr << "unhandled event ";
+        CHECK_MOZQUIC_EVENT(event);
   }
   return MOZQUIC_OK;
 }
-
 
 int accept_new_connection(mozquic_connection_t* new_connection) {
   auto closure = new closure_t;
@@ -219,7 +183,6 @@ int accept_new_connection(mozquic_connection_t* new_connection) {
   return MOZQUIC_OK;
 }
 
-
 int close_connection(mozquic_connection_t *c, closure_t* closure) {
   connected--;
   assert(connected >= 0);
@@ -228,6 +191,13 @@ int close_connection(mozquic_connection_t *c, closure_t* closure) {
   return mozquic_destroy_connection(c);
 }
 
+void pass_to_clients(char* msg, mozquic_stream_t* stream) {
+  for(mozquic_stream_t* s : streams) {
+    if(s != stream) {
+      mozquic_send(s, msg, static_cast<uint32_t>(strlen(msg)), 0);
+    }
+  }
+}
 
 int main(int argc, char** argv) {
   for (int i = 0; i < argc; ++i) {
@@ -238,7 +208,6 @@ int main(int argc, char** argv) {
       setenv("MOZQUIC_LOG", "all:9", 0);
     }
   }
-  setenv("MOZQUIC_LOG", "all:9", 0);
 
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {

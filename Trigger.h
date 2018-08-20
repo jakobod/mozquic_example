@@ -9,11 +9,12 @@
 #include <vector>
 
 class Trigger {
-  std::vector<mozquic_connection_t*>& connections;
+  mozquic_connection_t* connection;
   bool running;
+
 public:
-  Trigger(std::vector<mozquic_connection_t*>& connections) :
-  connections(connections),
+  Trigger(mozquic_connection_t* connection) :
+  connection(connection),
   running(true){};
   ~Trigger() = default;
 

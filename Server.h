@@ -9,9 +9,6 @@ static const uint16_t BUF_SIZE = 1024;
 // closure is per connections, state is per stream
 struct closure_t {
   int i;
-  int state[MAX_STREAM];
-  char buf[MAX_STREAM][BUF_SIZE];
-  int accum[MAX_STREAM];
   int shouldClose;
 };
 
