@@ -7,8 +7,10 @@
 
 void Trigger::operator()() {
   while (running){
-    mozquic_IO(connection);
-    usleep(5000);
+    for(mozquic_connection_t* conn : connections) {
+      mozquic_IO(conn);
+    }
+    usleep(1000);
   }
 }
 

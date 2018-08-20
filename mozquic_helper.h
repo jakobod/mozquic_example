@@ -2,7 +2,6 @@
 // Created by boss on 8/11/18.
 //
 #include <iostream>
-#include <vector>
 #include "MozQuic.h"
 
 #ifndef MOZQUIC_EXAMPLE_MOZQUIC_HELPER_H
@@ -40,8 +39,7 @@ if (err) {\
       break; \
   }\
   exit(err);\
-}\
-
+}
 
 #define CHECK_MOZQUIC_EVENT(event) \
 switch (event) {\
@@ -96,14 +94,6 @@ switch (event) {\
   default:\
     cout << "UNRECOGNIZED MOZQUIC_EVENT" << endl;\
     break;\
-}\
-
-
-struct Connection {
-    mozquic_connection_t* connection;
-    std::vector<mozquic_stream_t*> streams;
-};
-
-
+}
 
 #endif //MOZQUIC_EXAMPLE_MOZQUIC_HELPER_H

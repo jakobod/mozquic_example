@@ -43,7 +43,9 @@ void Client::run() {
   connect(host, static_cast<uint16_t>(stoi(port)));
 
   // start thread to trigger IO automatically
-  Trigger trigger(connection);
+  vector<mozquic_connection_t*> conn;
+  conn.push_back(connection);
+  Trigger trigger(conn);
   thread t_trigger(std::ref(trigger));
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
