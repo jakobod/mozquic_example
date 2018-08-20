@@ -8,6 +8,8 @@
 
 using namespace std;
 
+static const char* NSS_CONFIG =
+        "/home/jakob/Desktop/mozilla/mozquic/sample/nss-config/";
 static const uint16_t SERVER_PORT = 4434;
 static const char* SERVER_NAME = "foo.example.com";
 static const int SEND_CLOSE_TIMEOUT_MS = 1500;
@@ -225,3 +227,26 @@ int close_connection(mozquic_connection_t *c, closure_t* closure) {
   delete closure;
   return mozquic_destroy_connection(c);
 }
+
+
+int main(int argc, char** argv) {
+  for (int i = 0; i < argc; ++i) {
+    std::string arg(argv[i]);
+
+    if (arg == "--log" || arg == "-l") {
+      // log everything
+      setenv("MOZQUIC_LOG", "all:9", 0);
+    }
+  }
+  setenv("MOZQUIC_LOG", "all:9", 0);
+
+  // check for nss_config
+  if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]" << std::endl;
+    return -1;
+  }
+
+  Server server;
+  server.run();
+}
+

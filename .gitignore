@@ -21,3 +21,5 @@
 # mozquic related stuff
 !nss-config/
 !nss-config/*
+!mozquic/
+!mozquic/*

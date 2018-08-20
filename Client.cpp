@@ -18,6 +18,8 @@ using namespace std;
 static int connEventCB(void *closure, uint32_t event, void *param);
 
 // constants
+static const char* NSS_CONFIG =
+        "/home/jakob/CLionProjects/mozquic_example/nss-config/";
 static const char* SERVER_NAME = "localhost";
 static const uint16_t SERVER_PORT = 4434;
 
@@ -27,9 +29,9 @@ void Client::run() {
   connect(closure);
   // should be connected now
 
-  //  streamtest(closure);
+  streamtest(closure);
 
-  mozquic_destroy_connection(connection);
+  // mozquic_destroy_connection(connection);
 }
 
 
@@ -102,6 +104,7 @@ int Client::connect(Closure& closure) {
     }
   } while (++i < 2000 || closure.getCount);
 
+
   return 0;
 }
 
@@ -165,4 +168,27 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 //    fprintf(stderr,"unhandled event %X\n", event);
   }
   return MOZQUIC_OK;
+}
+
+int main(int argc, char** argv) {
+  for (int i = 0; i < argc; ++i) {
+    std::string arg(argv[i]);
+
+    if (arg == "--log" || arg == "-l") {
+      // log everything
+      setenv("MOZQUIC_LOG", "all:9", 0);
+    }
+  }
+  setenv("MOZQUIC_LOG", "all:9", 0);
+
+  // check for nss_config
+  if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]" << std::endl;
+    return -1;
+  }
+
+  Client client;
+  client.run();
+
+  return 0;
 }
