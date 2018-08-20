@@ -13,34 +13,6 @@ set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} -fno-omit-fram
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 set(MOZQUIC_SEARCH_DIR /home/jakob/CLionProjects/mozquic)
 
-
-include_directories(mozquic)
-
-set (
-        MOZQUIC_FILES
-
-        mozquic/Ack.cpp
-        mozquic/API.cpp
-        mozquic/Handshake.cpp
-        mozquic/Logging.cpp
-        mozquic/Logging.h
-        mozquic/MozQuic.cpp
-        mozquic/MozQuic.h
-        mozquic/NSSHelper.cpp
-        mozquic/NSSHelper.h
-        mozquic/Packetization.cpp
-        mozquic/Packetization.h
-        mozquic/Ping.cpp
-        mozquic/Sender.cpp
-        mozquic/Sender.h
-        mozquic/StatelessReset.cpp
-        mozquic/Streams.cpp
-        mozquic/Streams.h
-        mozquic/Timer.cpp
-        mozquic/Timer.h
-        mozquic/TransportExtension.cpp
-        mozquic/TransportExtension.h
-)
 set(
         CLIENT_FILES
 
@@ -57,6 +29,22 @@ set (
         Server.h
         mozquic_helper.h
 )
+
+#### FIND ####
+#### MOZQUIC ####
+if(NOT MOZQUIC_ROOT_DIR)
+    set(MOZQUIC_ROOT_DIR ${MOZQUIC_SEARCH_DIR})
+endif()
+if(NOT MOZQUIC_LIB_ROOT_DIR)
+    set(MOZQUIC_LIB_ROOT_DIR ${MOZQUIC_SEARCH_DIR}/cmake_build)
+endif()
+find_package(Mozquic)
+if (MOZQUIC_FOUND)
+    include_directories(${MOZQUIC_INCLUDE_DIRS})
+    message(STATUS "MOZQUIC_INCLUDE_DIRS: ${MOZQUIC_INCLUDE_DIRS}")
+else ()
+    message(FATAL_ERROR "Could not find MOZQUIC.")
+endif ()
 
 #### NSS ####
 find_package(NSS)
@@ -76,18 +64,20 @@ else()
     message(FATAL_ERROR "could not find NSPR.")
 endif()
 
+# client
 add_executable(
         client
         ${CLIENT_FILES}
-        ${MOZQUIC_FILES}
 )
 target_link_libraries(
         client
+        ${MOZQUIC_LIBRARIES}
         ${NSS_LIBRARIES}
         ${NSPR_LIBRARIES}
         -lstdc++
 )
 
+# server
 add_executable(
         server
         ${SERVER_FILES}
@@ -95,6 +85,7 @@ add_executable(
 )
 target_link_libraries(
         server
+        ${MOZQUIC_LIBRARIES}
         ${NSS_LIBRARIES}
         ${NSPR_LIBRARIES}
         -lstdc++
