@@ -10,13 +10,16 @@
 
 class Trigger {
   std::vector<mozquic_connection_t*>& connections;
+  bool running;
 
 public:
-  Trigger(std::vector<mozquic_connection_t*>& connections) :
-  connections(connections) {};
+  explicit Trigger(std::vector<mozquic_connection_t*>& connections) :
+  connections(connections),
+  running(true){};
   ~Trigger() = default;
 
   void operator()();
+  void stop();
 };
 
 

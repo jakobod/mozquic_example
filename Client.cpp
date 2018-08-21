@@ -9,6 +9,9 @@
 #include <cstdlib>
 #include <cassert>
 #include <vector>
+#include <thread>
+#include <string>
+#include "Trigger.h"
 #include "MozQuic.h"
 #include "mozquic_helper.h"
 
@@ -18,150 +21,159 @@ using namespace std;
 static int connEventCB(void *closure, uint32_t event, void *param);
 
 // constants
-static const char* SERVER_NAME = "localhost";
-static const uint16_t SERVER_PORT = 4434;
+static const char* help = "./client [params]\n"
+                          "possible params are:\n"
+                          "-h|--help: display this text\n"
+                          "-l|--log: enable mozquic-connection logging";
+
+static const char* NSS_CONFIG =
+        "/home/jakob/CLionProjects/mozquic_example/nss-config/";
 
 void Client::run() {
-  Closure closure;
+  string host = "localhost";
+  string port = "4434";
+
+  // get adress to connect to
+  cout << "Please enter a host to connect to:" << endl;
+  cin >> host;
+  cout << "Please enter a port to connect to:" << endl;
+  cin >> port;
+
   // set up connections to the server
-  connect(closure);
-  // should be connected now
+  connect(host, static_cast<uint16_t>(stoi(port)));
 
-  streamtest(closure);
+  // start thread to trigger IO automatically
+  vector<mozquic_connection_t*> conn;
+  conn.push_back(connection);
+  Trigger trigger(conn);
+  thread t_trigger(std::ref(trigger));
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+  chat();
+
+  // clean up all running things
+  trigger.stop();
+  t_trigger.join();
+  mozquic_shutdown_connection(connection);
+  mozquic_destroy_connection(connection);
 }
 
 
-void Client::streamtest(Closure& closure) {
-  cout << "streamtest is starting now." << endl;
+void Client::chat() {
+  mozquic_stream_t* stream;
+  string msg;
+  char conn_msg[] = "new connection";
 
-  char pre[] = "PREAMBLE";
-  char msg[8000];
-  memset(msg, 'f', 7999);
-  msg[7999] = 0;
-  mozquic_stream_t* stream = nullptr;
   CHECK_MOZQUIC_ERR(
-          mozquic_start_new_stream(&stream, connection, 0, 0, pre, (uint32_t)strlen(pre), 0),
-          "streamtest-start_new_stream");
-  CHECK_MOZQUIC_ERR(mozquic_send(stream, msg, (uint32_t)strlen(msg), 0), "streamtest-send");
+          mozquic_start_new_stream(&stream, connection, 0, 0, conn_msg,
+                  static_cast<uint32_t>(strlen(conn_msg)), 0),
+          "chat-start_new_stream");
 
-  do {
-    usleep (1000); // this is for handleio todo
-    int code = mozquic_IO(connection);
-    if (code != MOZQUIC_OK) {
-      fprintf(stderr,"IO reported failure\n");
-      break;
-    }
-  } while (!closure.recvFin);
-  closure.recvFin = false;
-  int i = 0;
-  do {
-    usleep (1000); // this is for handleio todo
-    int code = mozquic_IO(connection);
-    if (code != MOZQUIC_OK) {
-      cerr << "IO reported failure" << endl;
-      break;
-    }
-  } while (++i < 2000);
+  // conected and stream opened
+  while (getline(cin, msg)) {
+    if (msg == "/quit") break;
 
-  cout << "streamtest1 complete" << endl;
+    CHECK_MOZQUIC_ERR(mozquic_send(stream, const_cast<char *>(msg.c_str()),
+                                     static_cast<uint32_t>(msg.length()), 0),
+                                     "chat-send");
+  }
+
+  cout << "client closing connection" << endl;
+  mozquic_end_stream(stream);
 }
 
 
-int Client::connect(Closure& closure) {
-  config.originName = SERVER_NAME;
-  config.originPort = SERVER_PORT;
+void Client::connect(std::string host, uint16_t port) {
+  // handle IO manually. automatic handling not yet implemented.
+  config.handleIO = 0;
+
+  config.originName = host.c_str();
+  config.originPort = port;
   cout << "client connecting to " << config.originName << ":" << config.originPort << endl;
 
-  config.handleIO = 0; // todo mvp
-
-  // set things for the protocol
+  // set quic-related things
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "greaseVersionNegotiation", 0, nullptr), "connect-versionNegotiation");
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr), "connect-tolerateALPN");
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr), "connect-noTransportParams");
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452, nullptr), "connect-maxSize");
-  // CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "connect-0rtt");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "connect-0rtt");
 
   // open new connections
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "connect-new_conn");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB), "connect-callback");
-  CHECK_MOZQUIC_ERR(mozquic_set_event_callback_closure(connection, &closure), "connect-closure");
   CHECK_MOZQUIC_ERR(mozquic_start_client(connection), "connect-start");
-
-  uint32_t i=0;
-  do {
-    usleep (1000); // this is for handleio todo
-    int code = mozquic_IO(connection);
-    if (code != MOZQUIC_OK) {
-      fprintf(stderr,"IO reported failure\n");
-      break;
-    }
-    if (closure.getCount == -1) {
-      break;
-    }
-  } while (++i < 20 || closure.getCount);
-
-  return 0;
 }
 
 
 int connEventCB(void *closure, uint32_t event, void *param) {
-  auto clo = static_cast<Closure*>(closure);
-  if (event == MOZQUIC_EVENT_0RTT_POSSIBLE) {
-    cout << "We will send data during 0RTT." << endl;
-  }
-  if (event == MOZQUIC_EVENT_CONNECTED)
-    cout << "client connected" << endl;
+  switch (event) {
+    case MOZQUIC_EVENT_0RTT_POSSIBLE:
+      cout << "We will send data during 0RTT." << endl;
+      break;
+    case MOZQUIC_EVENT_CONNECTED:
+      cout << "client connected" << endl;
+      break;
 
-  if (event == MOZQUIC_EVENT_NEW_STREAM_DATA) {
-    mozquic_stream_t *stream = param;
-    if (mozquic_get_streamid(stream) & 0x3) {
-      fprintf(stderr,"ignore non client bidi streams\n");
-      return MOZQUIC_OK;
-    }
-
-    char buf[1000];
-    uint32_t amt = 0;
-    int fin = 0;
-
-    int code = mozquic_recv(stream, buf, 1000, &amt, &fin);
-    if (code != MOZQUIC_OK) {
-      fprintf(stderr,"recv stream error %d\n", code);
-      return MOZQUIC_OK;
-    }
-    fprintf(stderr,"Data: stream %d %d fin=%d\n",
-            mozquic_get_streamid(stream), amt, fin);
-    for (size_t j=0; j < amt; ) {
-      size_t rv = fwrite(buf + j, 1, amt - j, clo->fd[mozquic_get_streamid(stream)]);
-      assert(rv > 0);
-      j += rv;
-    }
-    if (fin) {
-      if (clo->fd[mozquic_get_streamid(stream)]) {
-        fclose (clo->fd[mozquic_get_streamid(stream)]);
-        clo->fd[mozquic_get_streamid(stream)] = nullptr;
+    case MOZQUIC_EVENT_NEW_STREAM_DATA: {
+      mozquic_stream_t *stream = param;
+      if (mozquic_get_streamid(stream) & 0x3) {
+        cerr << "ignore data on streams 0-3" << endl;
+        break;
       }
-      clo->recvFin = true;
-      mozquic_end_stream(stream);
-      if (clo->getCount) {
-        if (!--clo->getCount) {
-          clo->getCount = -1;
+
+      char buf[1024];
+      uint32_t amt = 0;
+      int fin = 0;
+      do {
+        memset(buf, 0, 1024);
+        int code = mozquic_recv(stream, buf, 1024, &amt, &fin);
+        if (code != MOZQUIC_OK) {
+          cerr << "recv stream error " << code << endl;
+          break;
         }
-      }
+        cout << buf << endl;
+      } while(amt > 0 && !fin);
+      break;
     }
-    return MOZQUIC_OK;
-  } else if (event == MOZQUIC_EVENT_IO) {
-    cout << "MOZQUIC_EVENT_IO" << endl;
-  } else if (event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
-             event == MOZQUIC_EVENT_ERROR) {
-    if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)
-      cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
-    else
-      cerr << "MOZQUIC_EVENT_ERROR" << endl;
 
-    mozquic_destroy_connection(param);
-    exit(event == MOZQUIC_EVENT_ERROR ? 2 : 0);
-  } else {
-//    fprintf(stderr,"unhandled event %X\n", event);
+    case MOZQUIC_EVENT_CLOSE_CONNECTION:
+    case MOZQUIC_EVENT_ERROR:
+      if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)
+        cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
+      else
+        cerr << "MOZQUIC_EVENT_ERROR" << endl;
+      mozquic_destroy_connection(param);
+      exit(event == MOZQUIC_EVENT_ERROR ? 2 : 0);
+
+    default:
+      break;
   }
+
   return MOZQUIC_OK;
+}
+
+int main(int argc, char** argv) {
+  for (int i = 0; i < argc; ++i) {
+    std::string arg(argv[i]);
+
+    if (arg == "--help" || arg == "-h") {
+      cout << help << endl;
+      exit(0);
+    }
+    if (arg == "--log" || arg == "-l") {
+      // log everything
+      setenv("MOZQUIC_LOG", "all:9", 0);
+    }
+  }
+
+  // check for nss_config
+  if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]" << std::endl;
+    return -1;
+  }
+
+  Client client;
+  client.run();
+
+  return 0;
 }
