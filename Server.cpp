@@ -25,7 +25,6 @@ void pass_to_clients(char* msg, mozquic_stream_t* stream);
 
 vector<mozquic_connection_t *> connections;
 static set<mozquic_stream_t*> streams;
-static int connected = 0;
 
 void Server::run() {
   // set up server
@@ -134,7 +133,6 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       uint32_t received = 0;
       int fin = 0;
       mozquic_stream_t *stream = param;
-      streams.emplace(stream);
       int id = mozquic_get_streamid(stream);
       if (id >= 128) {
         return MOZQUIC_ERR_GENERAL;
@@ -146,7 +144,11 @@ int connEventCB(void *closure, uint32_t event, void *param) {
           cerr << "Read stream error " << code << endl;
           return MOZQUIC_OK;
         } else if (received > 0) {
-          pass_to_clients(buf, stream);
+          std::string msg(buf);
+          if (msg == "/new_connection")
+            streams.emplace(stream);
+          else
+            pass_to_clients(buf, stream);
         }
       } while (received > 0 && !fin);
     }
@@ -172,10 +174,9 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 int accept_new_connection(mozquic_connection_t* new_connection) {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(new_connection, connEventCB),
           "accept_new_connection-set_callback");
-  connected++;
   connections.push_back(new_connection);
   std::cout << "new connections accepted. connected: "
-            << connected << std::endl;
+            << connections.size() << std::endl;
   return MOZQUIC_OK;
 }
 
@@ -183,8 +184,7 @@ int close_connection(mozquic_connection_t *c) {
   auto it = find(connections.begin(), connections.end(), c);
   if (it != connections.end())
     connections.erase(it);
-  cout << "server closed connection. connected: " << connected << endl;
-  connected--;
+  cout << "server closed connection. connected: " << connections.size() << endl;
   return mozquic_destroy_connection(c);
 }
 

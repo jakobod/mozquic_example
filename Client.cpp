@@ -33,11 +33,13 @@ void Client::run() {
   string host = "localhost";
   string port = "4434";
 
+  /*
   // get adress to connect to
   cout << "Please enter a host to connect to:" << endl;
   cin >> host;
   cout << "Please enter a port to connect to:" << endl;
   cin >> port;
+*/
 
   // set up connections to the server
   connect(host, static_cast<uint16_t>(stoi(port)));
@@ -62,7 +64,7 @@ void Client::run() {
 void Client::chat() {
   mozquic_stream_t* stream;
   string msg;
-  char conn_msg[] = "new connection";
+  char conn_msg[] = "/new_connection";
 
   CHECK_MOZQUIC_ERR(
           mozquic_start_new_stream(&stream, connection, 0, 0, conn_msg,
@@ -108,7 +110,7 @@ void Client::connect(std::string host, uint16_t port) {
 int connEventCB(void *closure, uint32_t event, void *param) {
   switch (event) {
     case MOZQUIC_EVENT_0RTT_POSSIBLE:
-      cout << "We will send data during 0RTT." << endl;
+      cout << "0RTT possible" << endl;
       break;
     case MOZQUIC_EVENT_CONNECTED:
       cout << "client connected" << endl;
@@ -139,7 +141,7 @@ int connEventCB(void *closure, uint32_t event, void *param) {
     case MOZQUIC_EVENT_CLOSE_CONNECTION:
     case MOZQUIC_EVENT_ERROR:
       if (event == MOZQUIC_EVENT_CLOSE_CONNECTION)
-        cout << "MOZQUIC_EVENT_CLOSE_CONNECTION" << endl;
+        cout << "server closed connection." << endl;
       else
         cerr << "MOZQUIC_EVENT_ERROR" << endl;
       mozquic_destroy_connection(param);
