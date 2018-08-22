@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <vector>
 #include <thread>
+#include <algorithm>
 
 #include "Server.h"
 #include "MozQuic.h"
@@ -14,8 +15,6 @@
 
 using namespace std;
 
-static const char* NSS_CONFIG =
-        "/home/jakob/Desktop/mozilla/mozquic/sample/nss-config/";
 static const uint16_t SERVER_PORT = 4434;
 static const char* SERVER_NAME = "foo.example.com";
 
@@ -24,7 +23,7 @@ int accept_new_connection(mozquic_connection_t *new_connection);
 int close_connection(mozquic_connection_t *c);
 void pass_to_clients(char* msg, mozquic_stream_t* stream);
 
-static std::vector<mozquic_connection_t *> connections;
+vector<mozquic_connection_t *> connections;
 static set<mozquic_stream_t*> streams;
 static int connected = 0;
 
@@ -32,19 +31,22 @@ void Server::run() {
   // set up server
   setup();
 
-  Trigger trigger(connections);
+  Trigger trigger(server_connections);
   thread t_trigger(ref(trigger));
 
   string dummy;
   cout << "press [enter] to quit server" << endl;
   getline(cin, dummy);
 
+  for(mozquic_connection_t* conn : connections) {
+    mozquic_destroy_connection(conn);
+  }
+
   trigger.stop();
   t_trigger.join();
 
-  for(mozquic_connection_t* conn : connections) {
+  for(mozquic_connection_t* conn : server_connections) {
     mozquic_destroy_connection(conn);
-    mozquic_IO(conn);
   }
 }
 
@@ -85,7 +87,7 @@ void Server::setup() {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(conn, connEventCB),
           "setup-event_cb_ip4");
   CHECK_MOZQUIC_ERR(mozquic_start_server(conn), "setup-start_server_ip4");
-  connections.push_back(conn);
+  server_connections.push_back(conn);
   conn = nullptr;
 
   config.ipv6 = 1;
@@ -95,7 +97,7 @@ void Server::setup() {
           "setup-event_cb_ip6");
   CHECK_MOZQUIC_ERR(mozquic_start_server(conn),
           "setup-start_server_ip6");
-  connections.push_back(conn);
+  server_connections.push_back(conn);
   conn = nullptr;
 
   config.originPort = SERVER_PORT + 1;
@@ -107,7 +109,7 @@ void Server::setup() {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(conn, connEventCB),
           "setup-event_cb_hrr");
   CHECK_MOZQUIC_ERR(mozquic_start_server(conn), "setup-start_server_hrr");
-  connections.push_back(conn);
+  server_connections.push_back(conn);
   conn = nullptr;
 
   cout << "server using certificate (HRR) for " << config.originName << ":"
@@ -119,7 +121,7 @@ void Server::setup() {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(conn, connEventCB),
           "setup-set_cb_hrr6");
   CHECK_MOZQUIC_ERR(mozquic_start_server(conn), "setup-start_server_hrr6");
-  connections.push_back(conn);
+  server_connections.push_back(conn);
   conn = nullptr;
 
   cout << "server initialized" << endl;
@@ -171,15 +173,18 @@ int accept_new_connection(mozquic_connection_t* new_connection) {
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(new_connection, connEventCB),
           "accept_new_connection-set_callback");
   connected++;
+  connections.push_back(new_connection);
   std::cout << "new connections accepted. connected: "
             << connected << std::endl;
   return MOZQUIC_OK;
 }
 
 int close_connection(mozquic_connection_t *c) {
-  connected--;
-  assert(connected >= 0);
+  auto it = find(connections.begin(), connections.end(), c);
+  if (it != connections.end())
+    connections.erase(it);
   cout << "server closed connection. connected: " << connected << endl;
+  connected--;
   return mozquic_destroy_connection(c);
 }
 
@@ -201,9 +206,15 @@ int main(int argc, char** argv) {
     }
   }
 
+  char buf[100];
+  memset(buf, 0, 100);
+  getcwd(buf, 100);
+  string nss_config(buf);
+  nss_config += "/../nss-config/";
+
   // check for nss_config
-  if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
-    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]"
+  if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
               << std::endl;
     return -1;
   }

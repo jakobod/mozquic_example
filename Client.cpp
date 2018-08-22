@@ -166,9 +166,16 @@ int main(int argc, char** argv) {
     }
   }
 
+  char buf[100];
+  memset(buf, 0, 100);
+  getcwd(buf, 100);
+  string nss_config(buf);
+  nss_config += "/../nss-config/";
+
   // check for nss_config
-  if (mozquic_nss_config(const_cast<char*>(NSS_CONFIG)) != MOZQUIC_OK) {
-    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << NSS_CONFIG << "]" << std::endl;
+  if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
+    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
+              << std::endl;
     return -1;
   }
 
