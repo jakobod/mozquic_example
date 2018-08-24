@@ -4,6 +4,7 @@
 
 #include "Client.h"
 #include <iostream>
+#include <algorithm>
 #include <cstring>
 #include <unistd.h>
 #include <cstdlib>
@@ -19,6 +20,7 @@ using namespace std;
 
 // function prototypes
 static int connEventCB(void *closure, uint32_t event, void *param);
+static int tryCB(void *closure, uint32_t event, void *param);
 
 // constants
 static const char* help = "./client [params]\n"
@@ -26,8 +28,14 @@ static const char* help = "./client [params]\n"
                           "-h|--help: display this text\n"
                           "-l|--log: enable mozquic-connection logging";
 
-static const char* NSS_CONFIG =
-        "/home/jakob/CLionProjects/mozquic_example/nss-config/";
+void strip_newline(char* buf, int size) {
+  for(int i = 0; i < size; ++i) {
+    if(buf[i] == '\n') {
+      buf[i] = 0;
+    }
+  }
+}
+
 
 void Client::run() {
   string host = "localhost";
@@ -74,7 +82,6 @@ void Client::chat() {
   // conected and stream opened
   while (getline(cin, msg)) {
     if (msg == "/quit") break;
-
     CHECK_MOZQUIC_ERR(mozquic_send(stream, const_cast<char *>(msg.c_str()),
                                      static_cast<uint32_t>(msg.length()), 0),
                                      "chat-send");
@@ -86,6 +93,9 @@ void Client::chat() {
 
 
 void Client::connect(std::string host, uint16_t port) {
+  mozquic_config_t config;
+  memset(&config, 0, sizeof(mozquic_config_t));
+
   // handle IO manually. automatic handling not yet implemented.
   config.handleIO = 0;
 
@@ -100,10 +110,41 @@ void Client::connect(std::string host, uint16_t port) {
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452, nullptr), "connect-maxSize");
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "connect-0rtt");
 
+  try_connect(config);
+
   // open new connections
   CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "connect-new_conn");
   CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB), "connect-callback");
   CHECK_MOZQUIC_ERR(mozquic_start_client(connection), "connect-start");
+}
+
+void Client::try_connect(mozquic_config_t& config) {
+  mozquic_connection_t* connection;
+  mozquic_new_connection(&connection, &config);
+  mozquic_set_event_callback(connection, tryCB);
+  mozquic_start_client(connection);
+
+  uint32_t i=0;
+  do {
+    usleep (1000); // this is for handleio todo
+    int code = mozquic_IO(connection);
+    if (code != MOZQUIC_OK) {
+       fprintf(stderr,"IO reported failure\n");
+       break;
+    }
+  } while (++i < 2000);
+
+  mozquic_destroy_connection(connection);
+}
+
+
+int tryCB(void *closure, uint32_t event, void *param){
+  if(event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
+     event == MOZQUIC_EVENT_ERROR) {
+    mozquic_destroy_connection(param);
+    exit(event == MOZQUIC_EVENT_ERROR ? 2 : 0);
+  }
+  return MOZQUIC_OK;
 }
 
 
@@ -133,7 +174,7 @@ int connEventCB(void *closure, uint32_t event, void *param) {
           cerr << "recv stream error " << code << endl;
           break;
         }
-        cout << buf << endl;
+        cout << buf;
       } while(amt > 0 && !fin);
       break;
     }
