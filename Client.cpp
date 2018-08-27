@@ -28,26 +28,15 @@ static const char* help = "./client [params]\n"
                           "-h|--help: display this text\n"
                           "-l|--log: enable mozquic-connection logging";
 
-void strip_newline(char* buf, int size) {
-  for(int i = 0; i < size; ++i) {
-    if(buf[i] == '\n') {
-      buf[i] = 0;
-    }
-  }
-}
-
-
 void Client::run() {
-  string host = "localhost";
-  string port = "4434";
+  string host("localhost");
+  string port("4434");
 
-  /*
   // get adress to connect to
   cout << "Please enter a host to connect to:" << endl;
   cin >> host;
   cout << "Please enter a port to connect to:" << endl;
   cin >> port;
-*/
 
   // set up connections to the server
   connect(host, static_cast<uint16_t>(stoi(port)));
@@ -101,20 +90,30 @@ void Client::connect(std::string host, uint16_t port) {
 
   config.originName = host.c_str();
   config.originPort = port;
-  cout << "client connecting to " << config.originName << ":" << config.originPort << endl;
+  cout << "client connecting to " << config.originName << ":"
+       << config.originPort << endl;
 
   // set quic-related things
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "greaseVersionNegotiation", 0, nullptr), "connect-versionNegotiation");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1, nullptr), "connect-tolerateALPN");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams", 1, nullptr), "connect-noTransportParams");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452, nullptr), "connect-maxSize");
-  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr), "connect-0rtt");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "greaseVersionNegotiation",
+                                          0, nullptr),
+                    "connect-versionNegotiation");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateBadALPN", 1,
+                                          nullptr), "connect-tolerateALPN");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "tolerateNoTransportParams",
+                                          1, nullptr),
+                    "connect-noTransportParams");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "maxSizeAllowed", 1452,
+                                          nullptr), "connect-maxSize");
+  CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "enable0RTT", 1, nullptr),
+                    "connect-0rtt");
 
   try_connect(config);
 
   // open new connections
-  CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config), "connect-new_conn");
-  CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB), "connect-callback");
+  CHECK_MOZQUIC_ERR(mozquic_new_connection(&connection, &config),
+                    "connect-new_conn");
+  CHECK_MOZQUIC_ERR(mozquic_set_event_callback(connection, connEventCB),
+                    "connect-callback");
   CHECK_MOZQUIC_ERR(mozquic_start_client(connection), "connect-start");
 }
 
@@ -139,7 +138,7 @@ void Client::try_connect(mozquic_config_t& config) {
 
 
 int tryCB(void *closure, uint32_t event, void *param){
-  if(event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
+  if (event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
      event == MOZQUIC_EVENT_ERROR) {
     mozquic_destroy_connection(param);
     exit(event == MOZQUIC_EVENT_ERROR ? 2 : 0);
@@ -169,13 +168,13 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       int fin = 0;
       do {
         memset(buf, 0, 1024);
-        int code = mozquic_recv(stream, buf, 1024, &amt, &fin);
+        int code = mozquic_recv(stream, buf, 1023, &amt, &fin);
         if (code != MOZQUIC_OK) {
           cerr << "recv stream error " << code << endl;
           break;
         }
-        cout << buf;
-      } while(amt > 0 && !fin);
+        cout << buf << endl; // why double newline?!
+    } while(amt > 0 && !fin);
       break;
     }
 
@@ -219,11 +218,11 @@ int main(int argc, char** argv) {
   if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
     std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
               << std::endl;
-    return -1;
+    exit(-1);
   }
 
   Client client;
   client.run();
 
-  return 0;
+  exit(0);
 }

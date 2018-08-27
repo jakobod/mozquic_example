@@ -24,7 +24,7 @@ int close_connection(mozquic_connection_t *c);
 void pass_to_clients(char* msg, mozquic_stream_t* stream);
 
 vector<mozquic_connection_t *> connections;
-static set<mozquic_stream_t*> streams;
+vector<mozquic_stream_t*> streams;
 
 void Server::run() {
   // set up server
@@ -48,7 +48,6 @@ void Server::run() {
     mozquic_destroy_connection(conn);
   }
 }
-
 
 void Server::setup() {
   mozquic_config_t config;
@@ -139,16 +138,17 @@ int connEventCB(void *closure, uint32_t event, void *param) {
       }
       do {
         memset(buf, 0, 1024);
-        int code = mozquic_recv(stream, &buf, 1024, &received, &fin);
+        int code = mozquic_recv(stream, &buf, 1023, &received, &fin);
         if (code != MOZQUIC_OK) {
           cerr << "Read stream error " << code << endl;
           return MOZQUIC_OK;
         } else if (received > 0) {
-          std::string msg(buf);
+          string msg (buf);
           if (msg == "/new_connection")
-            streams.emplace(stream);
-          else
+            streams.push_back(stream);
+          else {
             pass_to_clients(buf, stream);
+          }
         }
       } while (received > 0 && !fin);
     }
@@ -184,7 +184,8 @@ int close_connection(mozquic_connection_t *c) {
   auto it = find(connections.begin(), connections.end(), c);
   if (it != connections.end())
     connections.erase(it);
-  cout << "server closed connection. connected: " << connections.size() << endl;
+  cout << "server closed connection. connected: "
+       << connections.size() << endl;
   return mozquic_destroy_connection(c);
 }
 
