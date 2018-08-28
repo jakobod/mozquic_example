@@ -4,6 +4,8 @@ This is going to be a simple client-server implementation using the QUIC-protoco
 This example uses the mozquic-library as base. The used version can be found [here](https://github.com/jakobod/mozquic) in the 'trunk' branch.
 It is a fork of https://github.com/mcmanus/mozquic, but slightly changed. 
 
+Also you will need nss, which can be found [here](https://github.com/nss-dev/nss). You will need version 3.33 or higher.
+
 # build
 ```sh
 git clone git@github.org:jakobod/mozquic.git
