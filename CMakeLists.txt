@@ -61,6 +61,16 @@ set (
 )
 
 #### FIND ####
+#### MOZQUIC ####
+if (NOT MOZQUIC_ROOT_DIR)
+    set(MOZQUIC_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../mozquic/)
+endif ()
+find_package(Mozquic)
+if (MOZQUIC_FOUND)
+    include_directories(MOZQUC_INCLUDE_DIRS)
+else ()
+    message(FATAL_ERROR "Could not find Mozquic!")
+endif ()
 #### NSS ####
 find_package(NSS)
 if (NSS_FOUND)
@@ -82,24 +92,24 @@ endif()
 add_executable(
         client
         ${CLIENT_FILES}
-        ${MOZQUIC_FILES}
 )
 target_link_libraries(
         client
         ${NSS_LIBRARIES}
         ${NSPR_LIBRARIES}
+        ${MOZQUIC_LIBRARIES}
         -lstdc++
 )
 
 add_executable(
         server
         ${SERVER_FILES}
-        ${MOZQUIC_FILES}
 )
 target_link_libraries(
         server
         ${NSS_LIBRARIES}
         ${NSPR_LIBRARIES}
+        ${MOZQUIC_LIBRARIES}
         -lstdc++
 )
 

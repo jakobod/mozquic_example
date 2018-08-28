@@ -7,7 +7,6 @@
 #include <vector>
 #include <thread>
 #include <algorithm>
-
 #include "Server.h"
 #include "MozQuic.h"
 #include "mozquic_helper.h"
