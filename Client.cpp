@@ -28,18 +28,9 @@ static const char* help = "./client [params]\n"
                           "-h|--help: display this text\n"
                           "-l|--log: enable mozquic-connection logging";
 
-void Client::run() {
-  string host("localhost");
-  string port("4434");
-
-  // get adress to connect to
-  cout << "Please enter a host to connect to:" << endl;
-  cin >> host;
-  cout << "Please enter a port to connect to:" << endl;
-  cin >> port;
-
+void Client::run(std::string& host, uint16_t port) {
   // set up connections to the server
-  connect(host, static_cast<uint16_t>(stoi(port)));
+  connect(host, port);
 
   // start thread to trigger IO automatically
   vector<mozquic_connection_t*> conn;
@@ -82,7 +73,7 @@ void Client::chat() {
 
 
 void Client::connect(std::string host, uint16_t port) {
-  mozquic_config_t config;
+  mozquic_config_t config = {};
   memset(&config, 0, sizeof(mozquic_config_t));
 
   // handle IO manually. automatic handling not yet implemented.
@@ -137,7 +128,7 @@ void Client::try_connect(mozquic_config_t& config) {
 }
 
 
-int tryCB(void *closure, uint32_t event, void *param){
+int tryCB(void*, uint32_t event, void* param){
   if (event == MOZQUIC_EVENT_CLOSE_CONNECTION ||
      event == MOZQUIC_EVENT_ERROR) {
     mozquic_destroy_connection(param);
@@ -147,7 +138,7 @@ int tryCB(void *closure, uint32_t event, void *param){
 }
 
 
-int connEventCB(void *closure, uint32_t event, void *param) {
+int connEventCB(void*, uint32_t event, void* param) {
   switch (event) {
     case MOZQUIC_EVENT_0RTT_POSSIBLE:
       cout << "0RTT possible" << endl;
@@ -195,10 +186,20 @@ int connEventCB(void *closure, uint32_t event, void *param) {
 }
 
 int main(int argc, char** argv) {
+  uint16_t port = 4434;
+  std::string host = "localhost";
   for (int i = 0; i < argc; ++i) {
     std::string arg(argv[i]);
 
-    if (arg == "--help" || arg == "-h") {
+    if (arg == "--port" || arg == "-p") {
+      port = static_cast<uint16_t>(atoi(argv[i+1]));
+      ++i;
+    }
+    if (arg == "--host" || arg == "-h") {
+      host = string(argv[i+1]);
+      ++i;
+    }
+    if (arg == "--help") {
       cout << help << endl;
       exit(0);
     }
@@ -212,17 +213,17 @@ int main(int argc, char** argv) {
   memset(buf, 0, 100);
   getcwd(buf, 100);
   string nss_config(buf);
-  nss_config += "/../nss-config/";
+  nss_config += "";
 
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
-    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
+    std::cerr << "MOZQUIC_NSS_CONFIG FAILURE"
               << std::endl;
     exit(-1);
   }
 
   Client client;
-  client.run();
+  client.run(host, port);
 
   exit(0);
 }

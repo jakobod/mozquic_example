@@ -16,6 +16,10 @@ using namespace std;
 
 static const uint16_t SERVER_PORT = 4434;
 static const char* SERVER_NAME = "foo.example.com";
+static const char* help = "./client [params]\n"
+                          "possible params are:\n"
+                          "-h|--help: display this text\n"
+                          "-l|--log: enable mozquic-connection logging";
 
 int connEventCB(void *closure, uint32_t event, void *param);
 int accept_new_connection(mozquic_connection_t *new_connection);
@@ -25,9 +29,9 @@ void pass_to_clients(char* msg, mozquic_stream_t* stream);
 vector<mozquic_connection_t *> connections;
 vector<mozquic_stream_t*> streams;
 
-void Server::run() {
+void Server::run(uint16_t port) {
   // set up server
-  setup();
+  setup(port);
 
   Trigger trigger(server_connections);
   thread t_trigger(ref(trigger));
@@ -48,12 +52,12 @@ void Server::run() {
   }
 }
 
-void Server::setup() {
+void Server::setup(uint16_t port) {
   mozquic_config_t config;
   memset(&config, 0, sizeof(mozquic_config_t));
 
   config.originName = SERVER_NAME;
-  config.originPort = SERVER_PORT;
+  config.originPort = port;
 
   cout << "server using certificate for " << config.originName << ":"
        << config.originPort << endl;
@@ -145,9 +149,8 @@ int connEventCB(void *closure, uint32_t event, void *param) {
           string msg (buf);
           if (msg == "/new_connection")
             streams.push_back(stream);
-          else {
+          else
             pass_to_clients(buf, stream);
-          }
         }
       } while (received > 0 && !fin);
     }
@@ -197,30 +200,32 @@ void pass_to_clients(char* msg, mozquic_stream_t* stream) {
 }
 
 int main(int argc, char** argv) {
+  uint16_t port = 4434;
   for (int i = 0; i < argc; ++i) {
     std::string arg(argv[i]);
 
+    if (arg == "--port" || arg == "-p") {
+      port = static_cast<uint16_t>(atoi(argv[i+1]));
+      ++i;
+    }
+    if (arg == "--help") {
+      cout << help << endl;
+      exit(0);
+    }
     if (arg == "--log" || arg == "-l") {
       // log everything
       setenv("MOZQUIC_LOG", "all:9", 0);
     }
   }
 
-  char buf[100];
-  memset(buf, 0, 100);
-  getcwd(buf, 100);
-  string nss_config(buf);
-  nss_config += "/../nss-config/";
-
   // check for nss_config
-  if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
-    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
-              << std::endl;
-    return -1;
+  if (mozquic_nss_config(const_cast<char*>("../nss-config/")) != MOZQUIC_OK) {
+    std::cerr << "MOZQUIC_NSS_CONFIG FAILURE" << std::endl;
+    exit(-1);
   }
 
   Server server;
-  server.run();
+  server.run(port);
 
   return 0;
 }

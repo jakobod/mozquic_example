@@ -19,7 +19,7 @@ public:
     connection(nullptr),
     stream(nullptr) {};
   ~Client() = default;
-  void run();
+  void run(std::string& host, uint16_t port);
 
   void try_connect(mozquic_config_t& config);
 };
