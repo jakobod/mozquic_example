@@ -25,8 +25,11 @@ static int tryCB(void *closure, uint32_t event, void *param);
 // constants
 static const char* help = "./client [params]\n"
                           "possible params are:\n"
-                          "-h|--help: display this text\n"
-                          "-l|--log: enable mozquic-connection logging";
+                          "--help: display this text\n"
+                          "-p|--port <port> set port to connect to\n"
+                          "-h|--host <host> set host to connect to\n"
+                          "-l|--log: enable mozquic-connection logging\n"
+                          "-n|--nss-config <path-to-config> set nss-config path";
 
 void Client::run(std::string& host, uint16_t port) {
   // set up connections to the server
@@ -188,6 +191,12 @@ int connEventCB(void*, uint32_t event, void* param) {
 int main(int argc, char** argv) {
   uint16_t port = 4434;
   std::string host = "localhost";
+  char buf[100];
+  memset(buf, 0, 100);
+  getcwd(buf, 100);
+  string nss_config(buf);
+  nss_config += "/../nss-config/";
+
   for (int i = 0; i < argc; ++i) {
     std::string arg(argv[i]);
 
@@ -207,17 +216,15 @@ int main(int argc, char** argv) {
       // log everything
       setenv("MOZQUIC_LOG", "all:9", 0);
     }
+    if (arg == "--nss-config" || arg == "-n") {
+      nss_config = string(argv[i+1]);
+      i++;
+    }
   }
-
-  char buf[100];
-  memset(buf, 0, 100);
-  getcwd(buf, 100);
-  string nss_config(buf);
-  nss_config += "";
 
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
-    std::cerr << "MOZQUIC_NSS_CONFIG FAILURE"
+    std::cerr << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
               << std::endl;
     exit(-1);
   }

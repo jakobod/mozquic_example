@@ -14,12 +14,14 @@
 
 using namespace std;
 
-static const uint16_t SERVER_PORT = 4434;
+static const uint16_t SERVER_PORT = 44444;
 static const char* SERVER_NAME = "foo.example.com";
-static const char* help = "./client [params]\n"
+static const char* help = "./server [params]\n"
                           "possible params are:\n"
                           "-h|--help: display this text\n"
-                          "-l|--log: enable mozquic-connection logging";
+                          "-p|--port <port>: set port to listen on\n"
+                          "-l|--log: enable mozquic-connection logging\n"
+                          "-n|--nss-config <path-to-config> set nss-config path";
 
 int connEventCB(void *closure, uint32_t event, void *param);
 int accept_new_connection(mozquic_connection_t *new_connection);
@@ -101,7 +103,7 @@ void Server::setup(uint16_t port) {
   server_connections.push_back(conn);
   conn = nullptr;
 
-  config.originPort = SERVER_PORT + 1;
+  config.originPort = port + 1;
   config.ipv6 = 0;
   CHECK_MOZQUIC_ERR(mozquic_unstable_api1(&config, "forceAddressValidation", 1,
           nullptr), "setup-addr_Val_hrr");
@@ -200,21 +202,30 @@ void pass_to_clients(char* msg, mozquic_stream_t* stream) {
 }
 
 int main(int argc, char** argv) {
-  uint16_t port = 4434;
+  char buf[100];
+  memset(buf, 0, 100);
+  getcwd(buf, 100);
+  string nss_config(buf);
+  nss_config += "/../nss-config/";
+  uint16_t port = 4444;
+
   for (int i = 0; i < argc; ++i) {
     std::string arg(argv[i]);
-
-    if (arg == "--port" || arg == "-p") {
-      port = static_cast<uint16_t>(atoi(argv[i+1]));
-      ++i;
-    }
-    if (arg == "--help") {
-      cout << help << endl;
+    if (arg == "--help" || arg == "-h") {
+      std::cout << help << std::endl;
       exit(0);
+    }
+    if (arg == "--port" || arg == "-p") {
+      port = stoi(argv[i+1]);
+      i++;
     }
     if (arg == "--log" || arg == "-l") {
       // log everything
       setenv("MOZQUIC_LOG", "all:9", 0);
+    }
+    if (arg == "--nss-config" || arg == "-n") {
+      nss_config = string(argv[i+1]);
+      i++;
     }
   }
 
@@ -229,4 +240,3 @@ int main(int argc, char** argv) {
 
   return 0;
 }
-
