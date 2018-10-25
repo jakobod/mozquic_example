@@ -16,6 +16,11 @@ using namespace std;
 
 static const uint16_t SERVER_PORT = 44444;
 static const char* SERVER_NAME = "foo.example.com";
+static const char* help = "./server [params]\n"
+                          "possible params are:\n"
+                          "-h|--help: display this text\n"
+                          "-l|--log: enable mozquic-connection logging\n"
+                          "-n|--nss-config <path-to-config> set nss-config path";
 
 int connEventCB(void *closure, uint32_t event, void *param);
 int accept_new_connection(mozquic_connection_t *new_connection);
@@ -197,20 +202,27 @@ void pass_to_clients(char* msg, mozquic_stream_t* stream) {
 }
 
 int main(int argc, char** argv) {
-  for (int i = 0; i < argc; ++i) {
-    std::string arg(argv[i]);
-
-    if (arg == "--log" || arg == "-l") {
-      // log everything
-      setenv("MOZQUIC_LOG", "all:9", 0);
-    }
-  }
-
   char buf[100];
   memset(buf, 0, 100);
   getcwd(buf, 100);
   string nss_config(buf);
   nss_config += "/../nss-config/";
+
+  for (int i = 0; i < argc; ++i) {
+    std::string arg(argv[i]);
+    if (arg == "--help" || arg == "-h") {
+      std::cout << help << std::endl;
+      exit(0);
+    }
+    if (arg == "--log" || arg == "-l") {
+      // log everything
+      setenv("MOZQUIC_LOG", "all:9", 0);
+    }
+    if (arg == "--nss-config" || arg == "-n") {
+      nss_config = string(argv[i+1]);
+      i++;
+    }
+  }
 
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
