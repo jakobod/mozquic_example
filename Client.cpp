@@ -30,13 +30,7 @@ static const char* help = "./client [params]\n"
 
 void Client::run() {
   string host("localhost");
-  string port("4434");
-
-  // get adress to connect to
-  cout << "Please enter a host to connect to:" << endl;
-  cin >> host;
-  cout << "Please enter a port to connect to:" << endl;
-  cin >> port;
+  string port("44444");
 
   // set up connections to the server
   connect(host, static_cast<uint16_t>(stoi(port)));
@@ -216,7 +210,7 @@ int main(int argc, char** argv) {
 
   // check for nss_config
   if (mozquic_nss_config(const_cast<char*>(nss_config.c_str())) != MOZQUIC_OK) {
-    std::cout << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
+    std::cerr << "MOZQUIC_NSS_CONFIG FAILURE [" << nss_config << "]"
               << std::endl;
     exit(-1);
   }

@@ -14,7 +14,7 @@
 
 using namespace std;
 
-static const uint16_t SERVER_PORT = 4434;
+static const uint16_t SERVER_PORT = 44444;
 static const char* SERVER_NAME = "foo.example.com";
 
 int connEventCB(void *closure, uint32_t event, void *param);
@@ -224,4 +224,3 @@ int main(int argc, char** argv) {
 
   return 0;
 }
-

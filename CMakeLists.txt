@@ -11,36 +11,8 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fs
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(MOZQUIC_SEARCH_DIR /home/jakob/CLionProjects/mozquic)
+set(MOZQUIC_SEARCH_DIR /home/boss/CLionProjects/mozquic)
 
-
-include_directories(mozquic)
-
-set (
-        MOZQUIC_FILES
-
-        mozquic/Ack.cpp
-        mozquic/API.cpp
-        mozquic/Handshake.cpp
-        mozquic/Logging.cpp
-        mozquic/Logging.h
-        mozquic/MozQuic.cpp
-        mozquic/MozQuic.h
-        mozquic/NSSHelper.cpp
-        mozquic/NSSHelper.h
-        mozquic/Packetization.cpp
-        mozquic/Packetization.h
-        mozquic/Ping.cpp
-        mozquic/Sender.cpp
-        mozquic/Sender.h
-        mozquic/StatelessReset.cpp
-        mozquic/Streams.cpp
-        mozquic/Streams.h
-        mozquic/Timer.cpp
-        mozquic/Timer.h
-        mozquic/TransportExtension.cpp
-        mozquic/TransportExtension.h
-)
 set(
         CLIENT_FILES
 
@@ -63,10 +35,11 @@ set (
 #### FIND ####
 #### MOZQUIC ####
 if (NOT MOZQUIC_ROOT_DIR)
-    set(MOZQUIC_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../mozquic/)
+    set(MOZQUIC_ROOT_DIR ${MOZQUIC_SEARCH_DIR})
 endif ()
 find_package(Mozquic)
 if (MOZQUIC_FOUND)
+    message(STATUS "found MOZQUIC")
     include_directories(MOZQUC_INCLUDE_DIRS)
 else ()
     message(FATAL_ERROR "Could not find Mozquic!")
