@@ -11,7 +11,6 @@ set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fs
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_STATIC_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(MOZQUIC_SEARCH_DIR /home/boss/CLionProjects/mozquic)
 
 set(
         CLIENT_FILES
@@ -35,7 +34,7 @@ set (
 #### FIND ####
 #### MOZQUIC ####
 if (NOT MOZQUIC_ROOT_DIR)
-    set(MOZQUIC_ROOT_DIR ${MOZQUIC_SEARCH_DIR})
+  set(MOZQUIC_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mozquic")
 endif ()
 find_package(Mozquic)
 if (MOZQUIC_FOUND)
@@ -44,6 +43,7 @@ if (MOZQUIC_FOUND)
 else ()
     message(FATAL_ERROR "Could not find Mozquic!")
 endif ()
+
 #### NSS ####
 find_package(NSS)
 if (NSS_FOUND)
